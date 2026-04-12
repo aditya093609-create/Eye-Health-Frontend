@@ -153,7 +153,7 @@
 
       Auth.set(data.token, data.user);
       toast('Account created! Welcome to EyeCheck 🎉', 'success');
-      setTimeout(() => window.location.href = 'dashboard.html', 1200);
+      setTimeout(() => window.location.href = '../index.html', 1200);
     } catch (err) {
       showError('#error-box', err.message);
       setLoading(btn, false);
