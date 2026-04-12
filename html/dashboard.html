@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — EyeCheck</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .page { padding-top: 80px; }
+    .dash-header {
+      padding: 40px 0 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .dash-header h1 { font-size: 1.8rem; margin-bottom: 4px; }
+    .dash-header p { font-size: 0.95rem; }
+    .dash-body { padding: 40px 0; }
+
+    /* Latest result hero card */
+    .result-hero {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 32px; margin-bottom: 24px;
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 24px; align-items: center;
+    }
+    .result-hero-grade {
+      font-size: 4rem; font-weight: 700;
+      font-family: var(--mono); line-height: 1;
+    }
+    .result-hero-label { font-size: 0.85rem; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.08em; }
+    .result-hero-grade-name { font-size: 1.3rem; font-weight: 600; margin-bottom: 4px; }
+    .result-hero-date { font-size: 0.85rem; color: var(--text3); font-family: var(--mono); }
+
+    .score-breakdown { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px; }
+    .score-bar-item { }
+    .score-bar-label { font-size: 0.75rem; color: var(--text3); margin-bottom: 6px; }
+    .score-bar-val { font-size: 1rem; font-weight: 600; font-family: var(--mono); margin-bottom: 6px; }
+
+    /* History table */
+    .history-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px;
+    }
+    .history-card-header {
+      padding: 20px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .history-card-header h3 { font-size: 1rem; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      text-align: left; padding: 12px 24px;
+      font-size: 0.75rem; color: var(--text3);
+      text-transform: uppercase; letter-spacing: 0.08em;
+      background: var(--bg2); border-bottom: 1px solid var(--border);
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--surface2); }
+    tbody td { padding: 14px 24px; font-size: 0.9rem; vertical-align: middle; }
+    .grade-pill {
+      display: inline-block; padding: 4px 14px; border-radius: 100px;
+      font-size: 0.78rem; font-weight: 500;
+    }
+
+    /* Chart */
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px;
+    }
+    .chart-card h3 { margin-bottom: 20px; font-size: 1rem; }
+
+    /* Empty state */
+    .empty-state {
+      text-align: center; padding: 64px 32px;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 16px; }
+    .empty-state h3 { margin-bottom: 8px; }
+    .empty-state p { margin-bottom: 24px; }
+
+    .tips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 8px; }
+    .tip-card {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px;
+    }
+    .tip-icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .tip-card h4 { font-size: 0.9rem; margin-bottom: 6px; }
+    .tip-card p { font-size: 0.82rem; }
+
+    @media (max-width: 768px) {
+      .result-hero { grid-template-columns: 1fr; }
+      .score-breakdown { grid-template-columns: repeat(2,1fr); }
+      .tips-grid { grid-template-columns: 1fr; }
+      thead th:nth-child(3), tbody td:nth-child(3),
+      thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<!-- Navbar -->
+<nav class="navbar">
+  <a href="index.html" class="nav-logo"><span class="dot pulse"></span> Eye Health Checker</a>
+  <div class="nav-links">
+    <span id="nav-user" style="font-size:0.88rem; color:var(--text3); padding: 8px 12px;"></span>
+    <a href="index.html" class="active">Home</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+    <a href="test.html" class="btn btn-primary btn-sm">New Test</a>
+    <button onclick="logout()" class="btn btn-ghost btn-sm">Logout</button>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="container">
+
+    <!-- Header -->
+    <div class="dash-header">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1>Eye Health Dashboard</h1>
+          <p id="welcome-msg" class="text-muted">Loading your results...</p>
+        </div>
+        <a href="test.html" class="btn btn-primary">+ Start New Test</a>
+      </div>
+    </div>
+
+    <div class="dash-body" id="dash-body">
+      <!-- Loaded by JS -->
+      <div class="empty-state">
+        <div class="spinner" style="margin: 0 auto 16px;"></div>
+        <p class="text-muted">Loading your data...</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  Auth.redirect();
+  const user = Auth.getUser();
+  if (user) {
+    document.getElementById('nav-user').textContent = user.name;
+    document.getElementById('welcome-msg').textContent = `Welcome back, ${user.name}. Here's your eye health overview.`;
+  }
+
+  function logout() {
+    Auth.clear();
+    window.location.href = 'login.html';
+  }
+
+  const gradeColors = {
+    Excellent: '#4cdb8a', Good: '#00d4aa',
+    Fair: '#ffb347', Poor: '#ff8c5a', Critical: '#ff5a5a'
+  };
+
+  function gradePillHTML(grade) {
+    const c = gradeColors[grade] || '#888';
+    return `<span class="grade-pill" style="background:${c}22;color:${c};border:1px solid ${c}44">${grade}</span>`;
+  }
+
+  function scoreBarHTML(label, score) {
+    const color = score >= 80 ? '#4cdb8a' : score >= 60 ? '#ffb347' : '#ff5a5a';
+    return `
+      <div class="score-bar-item">
+        <div class="score-bar-label">${label}</div>
+        <div class="score-bar-val" style="color:${color}">${score}</div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" style="width:${score}%; background:${color}"></div>
+        </div>
+      </div>`;
+  }
+
+  async function loadDashboard() {
+    try {
+      const data = await apiFetch('/results/history');
+      const results = data.results;
+      const body = document.getElementById('dash-body');
+
+      if (!results || results.length === 0) {
+        body.innerHTML = `
+          <div class="empty-state fade-in">
+            <div class="icon">👁️</div>
+            <h3>No tests yet</h3>
+            <p class="text-muted">Take your first eye health test to see results here.</p>
+            <a href="test.html" class="btn btn-primary btn-lg">Start First Test</a>
+          </div>`;
+        return;
+      }
+
+      const latest = results[0];
+      const cfg = gradeStyle(latest.grade);
+
+      // Build chart data (last 10, oldest first)
+      const chartData = [...results].reverse().slice(-10);
+      const chartLabels = chartData.map(r => fmtDate(r.createdAt));
+      const chartScores = chartData.map(r => r.finalScore);
+
+      body.innerHTML = `
+        <!-- Latest result -->
+        <div class="result-hero fade-in">
+          <div>
+            <div class="result-hero-label">Latest Result</div>
+            <div class="result-hero-grade-name" style="color:${cfg.color}">${latest.grade}</div>
+            <div class="result-hero-date">${fmtDate(latest.createdAt)} · Score: ${latest.finalScore}/100</div>
+            <div style="font-size:0.88rem;color:var(--text2);margin-top:10px;max-width:420px">${latest.recommendation}</div>
+            <div class="score-breakdown" style="margin-top:20px">
+              ${scoreBarHTML('Snellen', latest.scores.snellen)}
+              ${scoreBarHTML('Ishihara', latest.scores.ishihara)}
+              ${scoreBarHTML('Contrast', latest.scores.contrast)}
+              ${scoreBarHTML('Distance', latest.scores.distance)}
+            </div>
+          </div>
+          <div style="text-align:center">
+            <div class="result-hero-grade" style="color:${cfg.color}">${latest.finalScore}</div>
+            <div style="font-size:0.8rem;color:var(--text3);margin-top:4px">out of 100</div>
+            <div style="margin-top:16px">
+              ${latest.needsGlasses
+                ? '<span class="badge badge-amber">🕶️ Consider glasses</span>'
+                : '<span class="badge badge-teal">✓ No glasses needed</span>'}
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart -->
+        ${results.length > 1 ? `
+        <div class="chart-card fade-in-delay-1">
+          <h3>Score History</h3>
+          <div style="position:relative;height:200px">
+            <canvas id="history-chart"></canvas>
+          </div>
+        </div>` : ''}
+
+        <!-- History table -->
+        <div class="history-card fade-in-delay-2">
+          <div class="history-card-header">
+            <h3>All Tests</h3>
+            <span style="font-size:0.85rem;color:var(--text3)">${results.length} test${results.length !== 1 ? 's' : ''}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Score</th>
+                <th>Grade</th>
+                <th>Glasses</th>
+                <th>Duration</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${results.map(r => `
+                <tr>
+                  <td style="font-family:var(--mono);font-size:0.82rem">${fmtDate(r.createdAt)}</td>
+                  <td><strong style="font-family:var(--mono)">${r.finalScore}</strong><span style="color:var(--text3);font-size:0.8rem">/100</span></td>
+                  <td>${gradePillHTML(r.grade)}</td>
+                  <td style="font-size:0.85rem;color:var(--text3)">${r.needsGlasses ? '🕶️ Yes' : '✓ No'}</td>
+                  <td style="font-size:0.82rem;color:var(--text3);font-family:var(--mono)">${r.testDuration ? r.testDuration + 's' : '—'}</td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Eye Tips -->
+        <div class="fade-in-delay-3">
+          <h3 style="margin-bottom:16px">Eye Health Tips</h3>
+          <div class="tips-grid">
+            <div class="tip-card">
+              <div class="tip-icon">👁️</div>
+              <h4>20-20-20 Rule</h4>
+              <p>Every 20 minutes, look at something 20 feet away for 20 seconds to reduce eye strain.</p>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">💡</div>
+              <h4>Proper Lighting</h4>
+              <p>Avoid harsh glare on your screen. Use ambient lighting equal to your screen brightness.</p>
+            </div>
+            <div class="tip-card">
+              <div class="tip-icon">😴</div>
+              <h4>Quality Sleep</h4>
+              <p>Your eyes repair themselves during sleep. Aim for 7–9 hours and avoid screens before bed.</p>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Render chart if data
+      if (results.length > 1) {
+        new Chart(document.getElementById('history-chart'), {
+          type: 'line',
+          data: {
+            labels: chartLabels,
+            datasets: [{
+              label: 'Eye Health Score',
+              data: chartScores,
+              borderColor: '#00d4aa',
+              backgroundColor: 'rgba(0,212,170,0.08)',
+              tension: 0.4, fill: true,
+              pointBackgroundColor: '#00d4aa',
+              pointRadius: 5, pointHoverRadius: 7,
+              borderWidth: 2,
+            }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { color: '#5a7090', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+              y: { min: 0, max: 100, ticks: { color: '#5a7090', font: { size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+            }
+          }
+        });
+      }
+
+    } catch (err) {
+      document.getElementById('dash-body').innerHTML = `
+        <div class="alert alert-error">${err.message}</div>`;
+    }
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

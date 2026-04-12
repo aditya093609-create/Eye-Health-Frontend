@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Your Results — EyeCheck</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .result-page { padding: 100px 0 60px; }
+
+    .result-hero {
+      text-align: center; padding: 64px 32px;
+      border-bottom: 1px solid var(--border); margin-bottom: 56px;
+      position: relative; overflow: hidden;
+    }
+    .result-hero::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 60% 60% at 50% 100%, var(--grade-color-dim), transparent);
+    }
+    .grade-circle {
+      width: 160px; height: 160px; border-radius: 50%;
+      border: 3px solid var(--grade-color);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      margin: 0 auto 28px;
+      background: var(--grade-color-dim);
+      position: relative; z-index: 1;
+      box-shadow: 0 0 40px var(--grade-color-dim);
+    }
+    .grade-score { font-size: 3rem; font-weight: 700; font-family: var(--mono); }
+    .grade-max { font-size: 0.85rem; color: var(--text3); }
+    .grade-name { font-size: 1.8rem; font-weight: 600; position: relative; z-index: 1; margin-bottom: 8px; }
+    .grade-date { font-size: 0.85rem; color: var(--text3); font-family: var(--mono); position: relative; z-index: 1; margin-bottom: 20px; }
+    .grade-rec { max-width: 520px; margin: 0 auto; position: relative; z-index: 1; font-size: 1rem; }
+
+    /* Breakdown */
+    .breakdown-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; margin-bottom: 40px; }
+    .breakdown-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px;
+    }
+    .breakdown-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .breakdown-card-title { display: flex; align-items: center; gap: 10px; }
+    .breakdown-icon { font-size: 1.3rem; }
+    .breakdown-name { font-weight: 500; }
+    .breakdown-weight { font-size: 0.78rem; color: var(--text3); font-family: var(--mono); }
+    .breakdown-score-big { font-size: 2rem; font-weight: 700; font-family: var(--mono); }
+    .breakdown-bar { height: 8px; background: var(--bg2); border-radius: 100px; overflow: hidden; margin: 12px 0; }
+    .breakdown-bar-fill { height: 100%; border-radius: 100px; transition: width 1s ease; }
+    .breakdown-detail { font-size: 0.82rem; color: var(--text3); }
+
+    /* Glasses verdict */
+    .verdict-card {
+      border-radius: var(--radius-lg); padding: 32px;
+      display: flex; align-items: center; gap: 24px;
+      margin-bottom: 40px;
+    }
+    .verdict-icon { font-size: 3rem; flex-shrink: 0; }
+    .verdict-card h3 { margin-bottom: 6px; }
+    .verdict-card p { font-size: 0.95rem; }
+
+    /* Tips */
+    .tips-section h2 { margin-bottom: 20px; }
+    .tips-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .tip { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .tip-icon { font-size: 1.4rem; margin-bottom: 10px; }
+    .tip h4 { font-size: 0.9rem; margin-bottom: 6px; }
+    .tip p { font-size: 0.82rem; }
+
+    /* CTA */
+    .result-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 48px; padding-top: 40px; border-top: 1px solid var(--border); }
+
+    @media (max-width: 768px) {
+      .breakdown-grid { grid-template-columns: 1fr; }
+      .tips-grid { grid-template-columns: 1fr; }
+      .verdict-card { flex-direction: column; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="nav-logo"><span class="dot pulse"></span> EyeCheck</a>
+  <div class="nav-links">
+    <a href="dashboard.html">Dashboard</a>
+    <a href="test.html" class="btn btn-primary btn-sm">Retake Test</a>
+  </div>
+</nav>
+
+<div class="result-page" id="result-page">
+  <div class="container">
+    <div style="display:flex;justify-content:center;padding:80px"><div class="spinner" style="width:40px;height:40px;border-width:3px"></div></div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+  Auth.redirect();
+
+  function gradeStyle(grade) {
+    if (grade === 'Excellent') return { color: '#4cdb8a', icon: '👁️' };
+    if (grade === 'Good') return { color: '#00d4aa', icon: '✅' };
+    if (grade === 'Fair') return { color: '#ffb347', icon: '⚠️' };
+    return { color: '#ff5a5a', icon: '❌' };
+  }
+
+  function fmtDate(dateStr) {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  const SCORE_INFO = {
+    snellen:  { name: 'Snellen Acuity', icon: '👁️', weight: '40%', detail: 'Measures sharpness of vision at distance.' },
+    ishihara: { name: 'Color Vision', icon: '🎨', weight: '20%', detail: 'Tests red-green color discrimination.' },
+    contrast: { name: 'Contrast Sensitivity', icon: '🌫️', weight: '25%', detail: 'Ability to detect low-contrast objects.' },
+    distance: { name: 'Distance & Astig.', icon: '📏', weight: '15%', detail: 'Correct viewing distance + astigmatism check.' },
+  };
+
+  function scoreColor(s) {
+    if (s >= 80) return '#4cdb8a';
+    if (s >= 65) return '#00d4aa';
+    if (s >= 50) return '#ffb347';
+    if (s >= 35) return '#ff8c5a';
+    return '#ff5a5a';
+  }
+
+  function render(result) {
+    const cfg = gradeStyle(result.grade);
+    const page = document.getElementById('result-page');
+
+    const analytics = JSON.parse(sessionStorage.getItem('ec_local_analytics') || '{}');
+    const details = analytics.details || {};
+    const avgDist = analytics.averageDistance || result.scores.distance;
+
+    page.innerHTML = `
+      <div class="result-hero fade-in" style="--grade-color:${cfg.color};--grade-color-dim:${cfg.color}18">
+        <div class="grade-circle" style="border-color:${cfg.color};background:${cfg.color}15">
+          <div class="grade-score" style="color:${cfg.color}">${result.finalScore}</div>
+          <div class="grade-max">/ 100</div>
+        </div>
+        <div class="grade-name" style="color:${cfg.color}">${result.grade}</div>
+        <div class="grade-date">${fmtDate(result.createdAt || new Date())}</div>
+        <div class="grade-rec"><p>${result.recommendation}</p></div>
+      </div>
+
+      <div class="container">
+        <div class="verdict-card fade-in-delay-1" style="background:${result.needsGlasses ? 'rgba(255,179,71,0.08)' : 'rgba(76,219,138,0.08)'};border:1px solid ${result.needsGlasses ? 'rgba(255,179,71,0.25)' : 'rgba(76,219,138,0.25)'}">
+          <div class="verdict-icon">${result.needsGlasses ? '🕶️' : '✅'}</div>
+          <div>
+            <h3 style="color:${result.needsGlasses ? 'var(--amber)' : 'var(--green)'}">
+              ${result.needsGlasses ? 'Glasses may be recommended' : 'No glasses needed based on this screening'}
+            </h3>
+            <p>${result.needsGlasses
+              ? 'Your results suggest you may benefit from corrective eyewear. Please schedule a professional eye exam to confirm.'
+              : 'Your vision appears to be within normal range. Continue with regular annual check-ups.'}</p>
+          </div>
+        </div>
+
+        <h2 style="margin-bottom:20px" class="fade-in-delay-1">Score Breakdown</h2>
+        <div class="breakdown-grid fade-in-delay-2">
+          ${Object.entries(result.scores).map(([key, score]) => {
+            const info = SCORE_INFO[key];
+            const col = scoreColor(score);
+
+            let displayVal = score;
+            let mistakesText = '';
+
+            // FIXED SYNTAX: Removed backslashes to allow template strings to compile properly
+            if (key === 'snellen' && details.snellen) {
+                displayVal = `${details.snellen.correct}/${details.snellen.total}`;
+                mistakesText = `${details.snellen.wrong} mistake${details.snellen.wrong !== 1 ? 's' : ''}`;
+            } else if (key === 'ishihara' && details.ishihara) {
+                displayVal = `${details.ishihara.correct}/${details.ishihara.total}`;
+                mistakesText = `${details.ishihara.wrong} mistake${details.ishihara.wrong !== 1 ? 's' : ''}`;
+            } else if (key === 'contrast' && details.contrast) {
+                displayVal = `${details.contrast.correct}/${details.contrast.total}`;
+                mistakesText = `${details.contrast.wrong} mistake${details.contrast.wrong !== 1 ? 's' : ''}`;
+            } else if (key === 'distance') {
+                displayVal = `${avgDist} cm`;
+                mistakesText = `Astigmatism: ${details.astigmatism || (score < 80 ? 'Detected' : 'Normal')}`;
+            }
+
+            return `
+              <div class="breakdown-card">
+                <div class="breakdown-card-header">
+                  <div class="breakdown-title" style="display:flex;align-items:center;gap:10px">
+                    <span style="font-size:1.3rem">${info.icon}</span>
+                    <div>
+                      <div style="font-weight:500">${info.name}</div>
+                      <div style="font-size:0.75rem;color:var(--text3)">${info.weight} weight</div>
+                    </div>
+                  </div>
+                  <div style="text-align:right">
+                    <div class="breakdown-score-big" style="color:${col}">${displayVal}</div>
+                    <div style="font-size:0.75rem; color:${mistakesText.includes('Normal') || mistakesText.startsWith('0 ') ? 'var(--green)' : 'var(--red)'}; font-weight:bold; margin-top: 4px;">${mistakesText}</div>
+                  </div>
+                </div>
+                <div class="breakdown-bar">
+                  <div class="breakdown-bar-fill" id="bar-${key}" style="width:0%;background:${col}"></div>
+                </div>
+                <div style="font-size:0.82rem;color:var(--text3)">${info.detail}</div>
+              </div>`;
+          }).join('')}
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px;margin-bottom:40px" class="fade-in-delay-3">
+          <h3 style="margin-bottom:20px">Vision Profile</h3>
+          <div style="position:relative;height:280px;max-width:400px;margin:0 auto">
+            <canvas id="radar-chart"></canvas>
+          </div>
+        </div>
+
+        <div class="tips-section fade-in-delay-4">
+          <h2>Personalised Eye Health Tips</h2>
+          <div class="tips-grid">
+            ${result.needsGlasses ? `
+              <div class="tip"><div class="tip-icon">👨‍⚕️</div><h4>See an Eye Doctor</h4><p>Your screening suggests a professional consultation is needed. Book an appointment with an ophthalmologist.</p></div>
+            ` : `
+              <div class="tip"><div class="tip-icon">📅</div><h4>Annual Check-ups</h4><p>Even with healthy vision, get a professional eye exam every year to catch any changes early.</p></div>
+            `}
+            <div class="tip"><div class="tip-icon">👁️</div><h4>20-20-20 Rule</h4><p>Every 20 minutes of screen time, look 20 feet away for 20 seconds to prevent digital eye strain.</p></div>
+            <div class="tip"><div class="tip-icon">🥦</div><h4>Eye-healthy Diet</h4><p>Eat leafy greens, fatty fish, and foods rich in Vitamin A and C to support long-term eye health.</p></div>
+            <div class="tip"><div class="tip-icon">😎</div><h4>UV Protection</h4><p>Always wear sunglasses with UV400 protection outdoors to prevent cataracts and macular degeneration.</p></div>
+            <div class="tip"><div class="tip-icon">💧</div><h4>Stay Hydrated</h4><p>Dehydration can cause dry eyes and blurry vision. Drink at least 2 litres of water daily.</p></div>
+            <div class="tip"><div class="tip-icon">😴</div><h4>Quality Sleep</h4><p>Eyes repair themselves during sleep. Avoid screens 1 hour before bed and aim for 7–9 hours of rest.</p></div>
+          </div>
+        </div>
+
+        <div class="result-cta">
+          <a href="dashboard.html" class="btn btn-outline btn-lg">View History</a>
+          <a href="test.html" class="btn btn-primary btn-lg">Retake Test</a>
+        </div>
+      </div>
+    `;
+
+    setTimeout(() => {
+      Object.entries(result.scores).forEach(([key, score]) => {
+        const bar = document.getElementById('bar-' + key);
+        if (bar) bar.style.width = score + '%';
+      });
+    }, 300);
+
+    setTimeout(() => {
+      const ctx = document.getElementById('radar-chart');
+      if (!ctx) return;
+      new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['Snellen\nAcuity', 'Color\nVision', 'Contrast\nSensitivity', 'Distance &\nAstig.'],
+          datasets: [{
+            label: 'Your Score',
+            data: [result.scores.snellen, result.scores.ishihara, result.scores.contrast, result.scores.distance],
+            borderColor: cfg.color,
+            backgroundColor: cfg.color + '22',
+            borderWidth: 2,
+            pointBackgroundColor: cfg.color,
+            pointRadius: 5,
+          }, {
+            label: 'Normal',
+            data: [85, 90, 85, 90],
+            borderColor: 'rgba(255,255,255,0.15)',
+            backgroundColor: 'rgba(255,255,255,0.04)',
+            borderWidth: 1,
+            pointRadius: 3,
+            pointBackgroundColor: 'rgba(255,255,255,0.3)',
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 100,
+              ticks: { display: false, stepSize: 20 },
+              grid: { color: 'rgba(255,255,255,0.06)' },
+              angleLines: { color: 'rgba(255,255,255,0.06)' },
+              pointLabels: { color: '#5a7090', font: { size: 11 } },
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }, 400);
+  }
+
+  const saved = sessionStorage.getItem('ec_last_result');
+  if (saved) {
+    render(JSON.parse(saved));
+  } else {
+    apiFetch('/results/latest')
+      .then(data => render(data.result))
+      .catch(err => {
+        document.getElementById('result-page').innerHTML = `
+          <div class="container" style="padding-top:80px">
+            <div class="alert alert-error">${err.message}</div>
+            <a href="dashboard.html" class="btn btn-primary mt-3">Go to Dashboard</a>
+          </div>`;
+      });
+  }
+</script>
+</body>
+</html>

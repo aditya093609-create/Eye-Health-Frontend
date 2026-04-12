@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — EyeCheck</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .auth-wrap {
+      display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh;
+    }
+    .auth-side {
+      background: var(--bg2);
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      justify-content: space-between; padding: 40px;
+      position: relative; overflow: hidden;
+    }
+    .auth-side::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 60%, rgba(0,212,170,0.07), transparent);
+    }
+    .auth-side-content { position: relative; z-index: 1; }
+    .auth-side-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.1rem; }
+    .auth-visual { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .auth-quote { position: relative; z-index: 1; }
+    .auth-quote p { font-size: 1.1rem; color: var(--text); line-height: 1.7; margin-bottom: 16px; }
+    .auth-quote span { font-size: 0.85rem; color: var(--text3); font-family: var(--mono); }
+
+    .auth-form-side {
+      display: flex; align-items: center; justify-content: center;
+      padding: 40px 24px;
+    }
+    .auth-form-wrap { width: 100%; max-width: 400px; }
+    .auth-form-wrap h2 { margin-bottom: 6px; }
+    .auth-form-wrap > p { margin-bottom: 32px; font-size: 0.95rem; }
+
+    .stat-pills { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 40px; position: relative; z-index: 1; }
+    .stat-pill {
+      background: rgba(0,212,170,0.08); border: 1px solid rgba(0,212,170,0.2);
+      border-radius: 100px; padding: 8px 16px;
+      font-size: 0.82rem; color: var(--teal);
+      font-family: var(--mono);
+    }
+
+    @media (max-width: 768px) {
+      .auth-wrap { grid-template-columns: 1fr; }
+      .auth-side { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="auth-wrap">
+  <div class="auth-side">
+    <div class="auth-side-brand">
+      <span class="dot pulse"></span> Eye Health Checker
+    </div>
+    <div class="auth-visual">
+      <svg viewBox="0 0 300 300" width="280" height="280" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="150" cy="150" r="130" fill="none" stroke="rgba(0,212,170,0.1)" stroke-width="1" stroke-dasharray="8 16"/>
+        <circle cx="150" cy="150" r="100" fill="none" stroke="rgba(0,212,170,0.08)" stroke-width="1"/>
+        <circle cx="150" cy="150" r="70" fill="rgba(0,212,170,0.04)" stroke="rgba(0,212,170,0.2)" stroke-width="1"/>
+        <ellipse cx="150" cy="150" rx="65" ry="38" fill="none" stroke="rgba(0,212,170,0.7)" stroke-width="1.5"/>
+        <circle cx="150" cy="150" r="24" fill="rgba(0,212,170,0.1)" stroke="rgba(0,212,170,0.5)" stroke-width="1.5"/>
+        <circle cx="150" cy="150" r="10" fill="rgba(0,212,170,0.3)"/>
+        <circle cx="144" cy="144" r="3" fill="rgba(255,255,255,0.7)"/>
+        <line x1="85" y1="150" x2="215" y2="150" stroke="rgba(0,212,170,0.2)" stroke-width="0.5" stroke-dasharray="3 5"/>
+        <line x1="150" y1="85" x2="150" y2="215" stroke="rgba(0,212,170,0.2)" stroke-width="0.5" stroke-dasharray="3 5"/>
+        <text x="160" y="108" fill="rgba(0,212,170,0.4)" font-size="8" font-family="Space Mono">20/20</text>
+        <text x="200" y="154" fill="rgba(77,159,255,0.4)" font-size="8" font-family="Space Mono">OK</text>
+      </svg>
+    </div>
+    <div class="auth-quote">
+      <p>"Your eyes are the window to your health. Test them regularly."</p>
+      <span>— Eye Check Health Advisory</span>
+      <div class="stat-pills">
+        <span class="stat-pill">4 Tests</span>
+        <span class="stat-pill">~5 min</span>
+        <span class="stat-pill">Voice Input</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-form-wrap">
+      <h2 class="fade-in">Welcome back</h2>
+      <p class="fade-in-delay-1 text-muted">Sign in to view your eye health history.</p>
+
+      <div id="error-box"></div>
+
+      <form id="login-form" class="fade-in-delay-2">
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" id="email" class="form-input" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;justify-content:space-between;">
+            Password
+          </label>
+          <div style="position: relative; display: flex; align-items: center;">
+            <input type="password" id="password" class="form-input" placeholder="••••••••" autocomplete="current-password" required style="padding-right: 40px;" />
+            <button type="button" id="toggle-password" style="position: absolute; right: 10px; background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 0;">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:8px">
+          Sign in
+        </button>
+
+        <div class="divider"><span>don't have an account?</span></div>
+        <a href="register.html" class="btn btn-outline btn-full">Create account</a>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/utils.js"></script>
+<script>
+  Auth.redirectIfLoggedIn();
+
+  // Password Visibility Toggle Logic
+  document.getElementById('toggle-password').addEventListener('click', function() {
+    const pwdInput = document.getElementById('password');
+    if (pwdInput.type === 'password') {
+      pwdInput.type = 'text';
+      this.textContent = '🙈';
+    } else {
+      pwdInput.type = 'password';
+      this.textContent = '👁️';
+    }
+  });
+
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError('#error-box');
+    const btn = document.getElementById('submit-btn');
+    setLoading(btn, true);
+
+    try {
+      const data = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: document.getElementById('email').value.trim(),
+          password: document.getElementById('password').value,
+        })
+      });
+
+      Auth.set(data.token, data.user);
+      toast('Login successful! Redirecting...', 'success');
+      setTimeout(() => window.location.href = 'index.html', 1000);
+    } catch (err) {
+      showError('#error-box', err.message);
+      setLoading(btn, false);
+    }
+  });
+</script>
+</body>
+</html>

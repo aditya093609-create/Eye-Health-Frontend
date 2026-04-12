@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eye Test — EyeCheck</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    body { background: var(--bg); }
+    .test-layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; padding-top: 64px; }
+
+    /* Sidebar */
+    .test-sidebar {
+      background: var(--bg2); border-right: 1px solid var(--border);
+      padding: 32px 24px; position: sticky; top: 64px;
+      height: calc(100vh - 64px); overflow-y: auto;
+    }
+    .sidebar-title { font-size: 0.75rem; color: var(--text3); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 20px; }
+    .step-nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: var(--radius); margin-bottom: 6px;
+      cursor: default; transition: background 0.2s;
+    }
+    .step-nav-item.active { background: var(--teal-dim); }
+    .step-nav-item.done { opacity: 0.6; }
+    .step-nav-item.upcoming { opacity: 0.35; }
+    .step-dot {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-family: var(--mono);
+      border: 1px solid var(--border2); color: var(--text3);
+    }
+    .step-nav-item.active .step-dot { background: var(--teal); border-color: var(--teal); color: #0a0e14; }
+    .step-nav-item.done .step-dot { background: transparent; border-color: var(--teal); color: var(--teal); }
+    .step-nav-label { font-size: 0.88rem; font-weight: 500; }
+    .step-nav-sub { font-size: 0.75rem; color: var(--text3); }
+
+    .overall-progress { margin-bottom: 32px; }
+    .overall-progress-label { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text3); margin-bottom: 8px; }
+
+    /* Camera panel */
+    .cam-panel {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); overflow: hidden; position: relative;
+      margin-bottom: 20px;
+    }
+    #cam-feed { width: 100%; display: block; max-height: 200px; object-fit: cover; }
+    .cam-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(transparent, rgba(10,14,20,0.9));
+      padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .dist-indicator {
+      font-family: var(--mono); font-size: 0.85rem;
+    }
+    .cam-status {
+      padding: 12px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .cam-status.error {
+      border-color: var(--red);
+      background: rgba(255,90,90,0.1);
+      color: var(--red);
+    }
+    .cam-status.success {
+      border-color: var(--green);
+      background: rgba(76,219,138,0.1);
+      color: var(--green);
+    }
+
+    /* Main test area */
+    .test-main { padding: 40px; display: flex; flex-direction: column; }
+    .test-header { margin-bottom: 32px; }
+    .test-phase-label { font-size: 0.75rem; color: var(--teal); font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 8px; }
+    .test-header h2 { margin-bottom: 8px; }
+    .test-header p { font-size: 0.95rem; }
+
+    /* Test content */
+    .test-content { flex: 1; display: flex; flex-direction: column; }
+
+    /* Snellen chart */
+    .snellen-chart {
+      background: #fff; color: #1a1a1a;
+      border-radius: var(--radius-lg); padding: 36px;
+      text-align: center; margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    .snellen-row {
+      font-family: 'Space Mono', monospace; font-weight: 700;
+      letter-spacing: 0.18em; line-height: 1.3;
+      color: #111;
+    }
+
+    /* Ishihara plates */
+    .ishihara-plate { text-align: center; margin-bottom: 24px; }
+    .ishihara-plate canvas { border-radius: 50%; box-shadow: var(--shadow); }
+
+    /* Contrast test */
+    .contrast-display {
+      border-radius: var(--radius-lg); padding: 48px; text-align: center; margin-bottom: 24px;
+      font-family: var(--mono); font-size: 3rem; font-weight: 700; letter-spacing: 0.2em;
+    }
+
+    /* Astigmatism */
+    .astig-wrap { text-align: center; margin-bottom: 24px; }
+    .astig-wrap canvas { border-radius: var(--radius-lg); }
+
+    /* Voice UI */
+    .voice-panel {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px;
+    }
+    .voice-status { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    
+    .mic-visualizer {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; height: 24px; min-width: 40px;
+    }
+    .mic-visualizer .bar {
+      width: 4px; height: 4px; border-radius: 2px;
+      background: var(--text3);
+      transition: height 0.05s ease, background-color 0.1s ease;
+    }
+    
+    .voice-status-text { font-size: 0.9rem; color: var(--text2); font-weight: 500; }
+    
+    .voice-transcript {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px; min-height: 48px;
+      font-size: 1.1rem; color: var(--text); font-family: var(--mono);
+      margin-bottom: 16px; letter-spacing: 0.05em;
+      transition: all 0.3s ease;
+    }
+
+    /* Timer */
+    .timer-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: var(--mono); font-size: 0.82rem; color: aliceblue;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 100px; padding: 5px 14px;
+    }
+
+    /* Score display */
+    .live-scores {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
+      margin-top: 16px;
+    }
+    .live-score-item {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 4px;
+    }
+    .score-row { display: flex; justify-content: space-between; align-items: center; }
+    .live-score-name { font-size: 0.82rem; color: var(--text3); }
+    .live-score-val { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--teal); }
+    .live-score-mistakes { font-size: 0.7rem; color: var(--red); text-align: right; }
+
+    /* Intro screen */
+    .intro-screen { max-width: 560px; }
+    .intro-checklist { list-style: none; margin: 24px 0 32px; }
+    .intro-checklist li {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+      font-size: 0.95rem;
+    }
+    .intro-checklist li:last-child { border-bottom: none; }
+    .check { color: var(--teal); font-size: 1rem; margin-top: 1px; }
+
+    /* Distance check step */
+    .dist-check-panel { max-width: 500px; }
+    .dist-meter {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 32px; text-align: center; margin-bottom: 20px;
+    }
+    .dist-value { font-size: 3.5rem; font-weight: 700; font-family: var(--mono); margin-bottom: 8px; }
+    .dist-bar-wrap {
+      background: var(--border); height: 8px; border-radius: 100px; margin: 16px 0;
+      position: relative; overflow: hidden;
+    }
+    .dist-bar-ideal { position: absolute; left: 53%; width: 20%; height: 100%; background: rgba(0,212,170,0.3); }
+    .dist-bar-cursor {
+      position: absolute; width: 4px; height: 100%; background: var(--teal);
+      border-radius: 2px; transition: left 0.3s; transform: translateX(-2px);
+    }
+
+    /* Skip/Prev Buttons */
+    .test-controls {
+      display: flex; justify-content: center; gap: 16px; margin-top: 8px;
+    }
+
+    @media (max-width: 900px) {
+      .test-layout { grid-template-columns: 1fr; }
+      .test-sidebar { display: none; }
+    }
+  </style>
+  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tracking.js/1.1.3/tracking-min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tracking.js/1.1.3/data/face-min.js"></script>
+</head>
+<body>
+<nav class="navbar">
+  <a href="index.html" class="nav-logo"><span class="dot pulse"></span> Eye Health Check</a>
+  <div class="nav-links">
+    <div class="timer-badge" id="main-timer">⏱ 00:00</div>
+    <a href="dashboard.html" class="btn btn-ghost btn-sm">Save & Exit</a>
+  </div>
+</nav>
+
+<div class="test-layout">
+  <div class="test-sidebar">
+    <div class="overall-progress">
+      <div class="overall-progress-label">
+        <span>Overall Progress</span>
+        <span id="progress-pct">0%</span>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-fill" id="progress-bar" style="width:0%"></div>
+      </div>
+    </div>
+
+    <div class="cam-panel">
+      <video id="cam-feed" autoplay playsinline muted></video>
+      <div class="cam-overlay">
+        <span class="dist-indicator" id="dist-readout">-- cm</span>
+        <span style="font-size:0.75rem;color:var(--text3)" id="cam-status-text">📷 Camera</span>
+      </div>
+    </div>
+
+    <div class="sidebar-title">Test Steps</div>
+    <div id="sidebar-steps"></div>
+
+    <div style="margin-top:24px">
+      <div class="sidebar-title">Live Analytics</div>
+      <div class="live-scores">
+        <div class="live-score-item">
+          <div class="score-row">
+            <span class="live-score-name">Snellen</span>
+            <span class="live-score-val" id="sc-snellen">0/8</span>
+          </div>
+          <div class="live-score-mistakes" id="ms-snellen"></div>
+        </div>
+        <div class="live-score-item">
+          <div class="score-row">
+            <span class="live-score-name">Color</span>
+            <span class="live-score-val" id="sc-ishihara">0/7</span>
+          </div>
+          <div class="live-score-mistakes" id="ms-ishihara"></div>
+        </div>
+        <div class="live-score-item">
+          <div class="score-row">
+            <span class="live-score-name">Contrast</span>
+            <span class="live-score-val" id="sc-contrast">0/8</span>
+          </div>
+          <div class="live-score-mistakes" id="ms-contrast"></div>
+        </div>
+        <div class="live-score-item">
+          <div class="score-row">
+            <span class="live-score-name">Avg Dist</span>
+            <span class="live-score-val" id="sc-distance">-- cm</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="test-main" id="test-main"></div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/utils.js"></script>
+<script>
+Auth.redirect();
+
+// ── GLOBAL STATE ────────────────────────────────────────────────
+const state = {
+  step: 0, 
+  scores: { snellen: 0, ishihara: 0, contrast: 0, distance: 100 },
+  
+  details: {
+    snellen: { correct: 0, wrong: 0, total: 8 },
+    ishihara: { correct: 0, wrong: 0, total: 7 },
+    contrast: { correct: 0, wrong: 0, total: 8 },
+    astigmatism: 'Normal'
+  },
+  
+  distance: 0,
+  distanceSum: 0, 
+  distanceCount: 0,
+  
+  cameraStream: null, 
+  isListening: false,
+  isTransitioning: false,
+  recognition: null,
+  
+  fullTranscript: '', 
+  activeTranscript: '', 
+  speechIdleTimer: null, 
+  attempts: 0, 
+  
+  currentContrastTarget: '',
+  startTime: null,
+};
+
+const STEPS = [
+  { name: 'Introduction', icon: '👋' },
+  { name: 'Distance Check', icon: '📏' },
+  { name: 'Mic Check', icon: '🎤' },
+  { name: 'Snellen Acuity', icon: '👁️' },
+  { name: 'Ishihara Color', icon: '🎨' },
+  { name: 'Contrast Test', icon: '🌫️' },
+  { name: 'Astigmatism', icon: '🌀' },
+];
+
+// ── UI UPDATERS ─────────────────────────────────────────────────────────
+
+function updateLiveScores() {
+  document.getElementById('sc-snellen').textContent = `${state.details.snellen.correct}/${state.details.snellen.total}`;
+  if (state.details.snellen.wrong > 0) document.getElementById('ms-snellen').textContent = `${state.details.snellen.wrong} mistakes`;
+
+  document.getElementById('sc-ishihara').textContent = `${state.details.ishihara.correct}/${state.details.ishihara.total}`;
+  if (state.details.ishihara.wrong > 0) document.getElementById('ms-ishihara').textContent = `${state.details.ishihara.wrong} mistakes`;
+
+  document.getElementById('sc-contrast').textContent = `${state.details.contrast.correct}/${state.details.contrast.total}`;
+  if (state.details.contrast.wrong > 0) document.getElementById('ms-contrast').textContent = `${state.details.contrast.wrong} mistakes`;
+
+  if (state.distanceCount > 0) {
+    const avgDist = Math.round(state.distanceSum / state.distanceCount);
+    document.getElementById('sc-distance').textContent = `${avgDist} cm`;
+  }
+}
+
+// ── CAMERA & MIC SETUP ──────────────────────────────────────────────────
+
+let cameraInitialized = false;
+let trackerTask = null;
+
+async function startCamera() {
+  const video = document.getElementById('cam-feed');
+  const statusText = document.getElementById('cam-status-text');
+  
+  try {
+    statusText.textContent = '📷 Requesting...';
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: 'user' },
+      audio: true 
+    });
+    
+    state.cameraStream = stream;
+    video.srcObject = stream;
+    
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => { video.play(); resolve(); };
+    });
+    
+    statusText.textContent = '✓ Active';
+    cameraInitialized = true;
+    toast('Camera & Mic ready', 'success');
+    
+    const startBtn = document.getElementById('start-test-btn');
+    if(startBtn) {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Start Test →';
+    }
+    const introCamStatus = document.getElementById('intro-cam-status');
+    if(introCamStatus) {
+        introCamStatus.className = 'cam-status success';
+        introCamStatus.innerHTML = '<h4>✓ Camera & Mic Active</h4><p style="margin-top: 8px;">Your system is ready for testing.</p>';
+    }
+    
+    startFaceDetection();
+    
+  } catch (error) {
+    statusText.textContent = '✕ Failed';
+    let errorMsg = 'Could not access camera/mic. Please allow access in browser settings.';
+    toast(errorMsg, 'error');
+  }
+}
+
+function startFaceDetection() {
+  const video = document.getElementById('cam-feed');
+  const distReadout = document.getElementById('dist-readout');
+  if (!video || !distReadout) return;
+
+  const tracker = new tracking.ObjectTracker('face');
+  tracker.setInitialScale(1.5); 
+  tracker.setStepSize(1.7); 
+  tracker.setEdgesDensity(0.1);
+
+  trackerTask = tracking.track(video, tracker);
+
+  tracker.on('track', function(event) {
+    if (event.data.length === 0) {
+      distReadout.textContent = "No face";
+      distReadout.style.color = 'var(--text3)';
+    } else {
+      const face = event.data[0];
+      const calculatedDistance = Math.round(4800 / face.width);
+      state.distance = Math.round((state.distance * 0.7) + (calculatedDistance * 0.3)) || calculatedDistance;
+      distReadout.textContent = `${state.distance} cm`;
+      
+      if (state.distance >= 75 && state.distance <= 105) distReadout.style.color = 'var(--green)';
+      else if (state.distance >= 65 && state.distance <= 115) distReadout.style.color = 'var(--amber)';
+      else distReadout.style.color = 'var(--red)';
+      
+      if (state.step >= 3 && state.step <= 6) {
+        state.distanceSum += state.distance;
+        state.distanceCount++;
+        updateLiveScores();
+      }
+    }
+  });
+}
+
+function stopCamera() {
+  if (state.cameraStream) {
+    state.cameraStream.getTracks().forEach(track => track.stop());
+    state.cameraStream = null;
+  }
+  if (trackerTask) { trackerTask.stop(); trackerTask = null; }
+}
+
+// ── TRUE AUDIO VISUALIZER ──
+
+let audioCtx = null;
+let audioAnalyser = null;
+let audioDataArray = null;
+let visualizerLoop = null;
+
+async function startAudioVisualizer() {
+  if (!audioCtx && state.cameraStream) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      audioAnalyser = audioCtx.createAnalyser();
+      audioAnalyser.fftSize = 64; 
+      const source = audioCtx.createMediaStreamSource(state.cameraStream);
+      source.connect(audioAnalyser);
+      audioDataArray = new Uint8Array(audioAnalyser.frequencyBinCount);
+    } catch (e) { return; }
+  }
+
+  if (audioCtx && audioCtx.state === 'suspended') {
+    try { await audioCtx.resume(); } catch(e) {}
+  }
+
+  if (visualizerLoop) cancelAnimationFrame(visualizerLoop);
+
+  function renderVisualizer() {
+    visualizerLoop = requestAnimationFrame(renderVisualizer);
+    if (!audioAnalyser) return;
+    
+    audioAnalyser.getByteFrequencyData(audioDataArray);
+    const bars = document.querySelectorAll('.mic-visualizer .bar');
+    if (!bars.length) return;
+
+    for (let i = 0; i < bars.length; i++) {
+      const val = audioDataArray[i * 2 + 1] || 0; 
+      const height = Math.max(4, (val / 255) * 22); 
+      bars[i].style.height = height + 'px';
+      bars[i].style.backgroundColor = val > 75 ? 'var(--red)' : 'var(--teal)';
+    }
+  }
+  renderVisualizer();
+}
+
+function stopAudioVisualizer() {
+  if (visualizerLoop) { cancelAnimationFrame(visualizerLoop); visualizerLoop = null; }
+  const bars = document.querySelectorAll('.mic-visualizer .bar');
+  bars.forEach(b => { b.style.height = '4px'; b.style.backgroundColor = 'var(--text3)'; });
+}
+
+// ── PHONETIC TRANSLATORS ───────────────────────────────
+
+function sanitizeSnellen(text) {
+  let t = text.toLowerCase();
+  t = t.replace(/\b(i|see|the|letter|letters|is|are|it|its|it's|read|can|and|mean|meant|like|looks)\b/g, '');
+  const map = {
+    'u': ['you'],
+    'e': ['ee', 'he', 'hey', 'a', 'i'], 
+    'f': ['ef', 'eff', 'if', 'of', 'half', 'wife', 's', 'x'],
+    'p': ['pee', 'pea', 'be', 'fee', 'b', 'v'], 
+    't': ['tee', 'tea', 'the', 'tree', 'g'],
+    'o': ['oh', 'owe', 'awe', 'zero', 'hole'], 
+    'z': ['zee', 'zed', 'said', 'dead', 'red', 'j'],
+    'l': ['el', 'ell', 'hell', 'all', 'well'], 
+    'd': ['dee', 'they', 'day'],
+    'c': ['see', 'sea', 'she', 'si']
+  };
+  for (let [letter, words] of Object.entries(map)) {
+    words.forEach(w => { t = t.replace(new RegExp('\\b' + w + '\\b', 'g'), letter); });
+  }
+  let cleaned = t.replace(/[^a-z]/g, '');
+  cleaned = cleaned
+    .replace(/b/g, 'p').replace(/v/g, 'p')
+    .replace(/s/g, 'f').replace(/x/g, 'f')
+    .replace(/g/g, 't').replace(/j/g, 'z')
+    .replace(/a/g, 'e').replace(/i/g, 'e')
+    .replace(/y/g, 'e').replace(/m/g, 'n')
+    .replace(/w/g, 'v').replace(/r/g, 'l');
+  return cleaned;
+}
+
+function sanitizeIshihara(text) {
+  return text.toLowerCase()
+    .replace(/twelve/g, '12').replace(/eight/g, '8').replace(/six/g, '6')
+    .replace(/twenty[- ]?nine/g, '29').replace(/seventy[- ]?four/g, '74')
+    .replace(/five/g, '5').replace(/fifteen/g, '15')
+    .replace(/[^0-9]/g, '');
+}
+
+function sanitizeContrast(text) {
+  let t = text.toLowerCase();
+  t = t.replace(/\b(i|see|the|letter|letters|is|are|it|its|it's|read|can|and|mean|meant|like|looks)\b/g, '');
+  const map = {
+    'r': ['are', 'our', 'hour'], 'k': ['kay', 'okay'],
+    'h': ['aitch', 'age', 'each', 'eight'], 's': ['ess', 'yes', 'is', 'as'],
+    'n': ['en', 'an', 'and', 'in'], 'c': ['see', 'sea', 'she'],
+    'v': ['vee', 'we'], 'z': ['zee', 'zed', 'said'],
+    'b': ['bee', 'be', 'me'], 'm': ['em', 'am', 'them']
+  };
+  for (let [letter, words] of Object.entries(map)) {
+    words.forEach(w => { t = t.replace(new RegExp('\\b' + w + '\\b', 'g'), letter); });
+  }
+  let cleaned = t.replace(/[^a-z]/g, '');
+  cleaned = cleaned
+    .replace(/f/g, 's').replace(/x/g, 's')
+    .replace(/p/g, 'b').replace(/d/g, 'b')
+    .replace(/t/g, 'c').replace(/g/g, 'c')
+    .replace(/w/g, 'v').replace(/l/g, 'r');
+  return cleaned;
+}
+
+// ── UNIFIED ANSWER EVALUATOR ────────────────────────────────
+
+function resetVoicePanel() {
+    const el = document.getElementById('voice-transcript');
+    if (!el) return;
+    el.style.borderColor = 'var(--border)';
+    el.style.backgroundColor = 'var(--bg2)';
+
+    if (state.step === 2) el.textContent = 'Say the word...';
+    else if (state.step === 3) el.textContent = 'Say the letters shown';
+    else if (state.step === 4) el.textContent = 'Say the number...';
+    else if (state.step === 5) el.textContent = 'Say the letters shown';
+    else if (state.step === 6) el.textContent = 'Say "same" or "different"';
+    else el.textContent = 'Listening automatically...';
+}
+
+function displayFeedback(text, status) {
+  const el = document.getElementById('voice-transcript');
+  if (!el) return;
+  let displayStr = text.length > 40 ? '...' + text.slice(-40) : text;
+  const safeText = displayStr.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  
+  if (status === 'correct') {
+    el.innerHTML = `You said: <span style="color:var(--green); font-weight:700;">${safeText}</span> <span style="color:var(--green)">✓</span>`;
+    el.style.borderColor = 'var(--green)';
+    el.style.backgroundColor = 'rgba(76,219,138,0.05)';
+  } else if (status === 'wrong') {
+    // Show attempts if relevant
+    let attemptMsg = (state.step >= 3 && state.step <= 5) ? ` ✕ (Attempt ${state.attempts}/3)` : ` ✕`;
+    el.innerHTML = `You said: <span style="color:var(--red); font-weight:700;">${safeText}</span> <span style="color:var(--red)">${attemptMsg}</span>`;
+    el.style.borderColor = 'var(--red)';
+    el.style.backgroundColor = 'rgba(255,90,90,0.05)';
+  } else if (status === 'failed') {
+    el.innerHTML = `You said: <span style="color:var(--red); font-weight:700;">${safeText}</span> <span style="color:var(--red)">✕ (Moving to next...)</span>`;
+    el.style.borderColor = 'var(--red)';
+    el.style.backgroundColor = 'rgba(255,90,90,0.1)';
+  } else if (status === 'partial') {
+    el.innerHTML = `You said: <span style="color:var(--amber); font-weight:700;">${safeText}</span> <span style="color:var(--amber)">... (keep going)</span>`;
+    el.style.borderColor = 'var(--amber)';
+    el.style.backgroundColor = 'rgba(255,179,71,0.05)';
+  } else {
+    el.textContent = safeText;
+    el.style.borderColor = 'var(--border)';
+    el.style.backgroundColor = 'var(--bg2)';
+  }
+}
+
+function forceMicRestart() {
+  if (state.recognition && state.isListening) {
+    try { state.recognition.stop(); } catch(e) {}
+  }
+}
+
+function evaluateAnswer(text, isFinal) {
+  if (state.isTransitioning || !text) return;
+
+  let isCorrect = false;
+  let isPartial = false;
+  let hasAstig = false;
+
+  if (state.step === 2) {
+    const expected = MIC_WORDS[micWordIdx].toLowerCase();
+    if (text.toLowerCase().includes(expected)) isCorrect = true;
+  } else if (state.step === 3) {
+    const expected = SNELLEN_ROWS[snellenIdx].letters.toLowerCase();
+    const sanitized = sanitizeSnellen(text);
+    if (expected.length <= 2) { isCorrect = sanitized === expected; } 
+    else { isCorrect = sanitized.includes(expected); }
+  } else if (state.step === 4) {
+    const expected = ISHIHARA_PLATES[ishiharaIdx].answer;
+    if (sanitizeIshihara(text).endsWith(expected)) isCorrect = true;
+  } else if (state.step === 5) {
+    const expected = state.currentContrastTarget;
+    const sanitized = sanitizeContrast(text);
+    if (expected.length <= 2) { isCorrect = sanitized === expected; } 
+    else { isCorrect = sanitized.includes(expected); }
+  } else if (state.step === 6) {
+    const ans = text.toLowerCase();
+    if (ans.includes('same') || ans.includes('equal') || ans.includes('all')) { isCorrect = true; hasAstig = false; } 
+    else if (ans.includes('diff') || ans.includes('dark') || ans.includes('blur')) { isCorrect = true; hasAstig = true; }
+  }
+
+  if (isCorrect) {
+    state.isTransitioning = true;
+    state.attempts = 0;
+    clearTimeout(state.speechIdleTimer);
+    displayFeedback(text, 'correct');
+    forceMicRestart(); 
+    
+    if (state.step === 3) { snellenAnswers[snellenIdx] = true; state.details.snellen.correct = snellenAnswers.filter(Boolean).length; }
+    else if (state.step === 4) { ishiharaAnswers[ishiharaIdx] = true; state.details.ishihara.correct = ishiharaAnswers.filter(Boolean).length; }
+    else if (state.step === 5) { contrastAnswers[contrastIdx] = true; state.details.contrast.correct = contrastAnswers.filter(Boolean).length; }
+    updateLiveScores();
+    
+    setTimeout(() => {
+      state.fullTranscript = ''; 
+      state.activeTranscript = '';
+      state.isTransitioning = false;
+      if (state.step === 2) { micWordIdx++; renderMicCheck(); } 
+      else if (state.step === 3) { snellenIdx++; renderSnellen(); } 
+      else if (state.step === 4) { ishiharaIdx++; renderIshihara(); } 
+      else if (state.step === 5) { contrastIdx++; renderContrast(); } 
+      else if (state.step === 6) { astigSubmit(hasAstig); }
+    }, 1000);
+    
+  } else if (isPartial) {
+    displayFeedback(text, 'partial'); 
+  } else if (isFinal) {
+    clearTimeout(state.speechIdleTimer);
+    
+    // Mic Check doesn't have a 3-strike limit
+    if (state.step === 2) {
+        displayFeedback(text, 'wrong');
+        state.fullTranscript = ''; state.activeTranscript = ''; forceMicRestart();
+        setTimeout(() => { if (!state.isTransitioning) resetVoicePanel(); }, 1500);
+        return;
+    }
+
+    state.attempts++;
+
+    if (state.attempts >= 3) {
+        // FAIL PLATE ON 3RD STRIKE
+        state.isTransitioning = true;
+        displayFeedback(text, 'failed'); 
+        state.fullTranscript = ''; state.activeTranscript = ''; forceMicRestart(); 
+        
+        if (state.step === 3) { state.details.snellen.wrong++; snellenAnswers[snellenIdx] = false; }
+        else if (state.step === 4) { state.details.ishihara.wrong++; ishiharaAnswers[ishiharaIdx] = false; }
+        else if (state.step === 5) { state.details.contrast.wrong++; contrastAnswers[contrastIdx] = false; }
+        else if (state.step === 6) { astigSubmit(false); return; } 
+        updateLiveScores();
+
+        setTimeout(() => {
+            state.attempts = 0;
+            state.isTransitioning = false;
+            if (state.step === 3) { snellenIdx++; renderSnellen(); } 
+            else if (state.step === 4) { ishiharaIdx++; renderIshihara(); } 
+            else if (state.step === 5) { contrastIdx++; renderContrast(); } 
+        }, 2000);
+    } else {
+        // TRY AGAIN
+        displayFeedback(text, 'wrong'); 
+        state.fullTranscript = ''; state.activeTranscript = ''; forceMicRestart();
+
+        setTimeout(() => {
+            if (!state.isTransitioning) resetVoicePanel();
+        }, 1500); 
+    }
+  } else {
+    displayFeedback(text, 'interim');
+  }
+}
+
+// ── VOICE RECOGNITION ──────────
+
+function setMicText(textMsg) {
+  const text = document.getElementById('mic-status-text');
+  if (text && textMsg) text.textContent = textMsg;
+}
+
+function initVoiceRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+  
+  const recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = navigator.language || 'en-US'; 
+  
+  recognition.onstart = () => setMicText('Mic active. Speak loudly...');
+  recognition.onspeechstart = () => setMicText('Hearing you...');
+  recognition.onspeechend = () => setMicText('Processing...');
+  
+  recognition.onresult = (event) => {
+    if (state.isTransitioning) return;
+
+    let interim = '';
+    let finalStr = '';
+
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      if (event.results[i].isFinal) finalStr += event.results[i][0].transcript + ' ';
+      else interim += event.results[i][0].transcript;
+    }
+
+    if (finalStr) state.fullTranscript += ' ' + finalStr.toLowerCase();
+    if (state.fullTranscript.length > 100) state.fullTranscript = state.fullTranscript.slice(-50);
+    
+    let activeText = (state.fullTranscript + ' ' + interim.toLowerCase()).trim();
+    
+    if (state.step === 3 || state.step === 5) {
+       activeText = activeText.replace(/\byou\b/g, 'u')
+                              .replace(/\bee\b/g, 'e')
+                              .replace(/\beeh\b/g, 'e')
+                              .replace(/\bdee\b/g, 'd')
+                              .replace(/\bpee\b/g, 'p')
+                              .replace(/\bpea\b/g, 'p')
+                              .replace(/\btee\b/g, 't')
+                              .replace(/\btea\b/g, 't')
+                              .replace(/\bsee\b/g, 'c')
+                              .replace(/\bsea\b/g, 'c')
+                              .replace(/\bbee\b/g, 'b')
+                              .replace(/\bbe\b/g, 'b')
+                              .replace(/\bare\b/g, 'r')
+                              .replace(/\bour\b/g, 'r')
+                              .replace(/\bkay\b/g, 'k')
+                              .replace(/\bess\b/g, 's')
+                              .replace(/\byes\b/g, 's')
+                              .replace(/\bvee\b/g, 'v')
+                              .replace(/\bzee\b/g, 'z')
+                              .replace(/\bzed\b/g, 'z')
+                              .replace(/\bem\b/g, 'm')
+                              .replace(/\ben\b/g, 'n')
+                              .replace(/\bwhy\b/g, 'y');
+    }
+    
+    state.activeTranscript = activeText;
+    if (!activeText) return;
+
+    const isFinal = event.results[event.results.length - 1].isFinal;
+    evaluateAnswer(activeText, isFinal);
+    
+    clearTimeout(state.speechIdleTimer);
+    state.speechIdleTimer = setTimeout(() => {
+        if (!state.isTransitioning && state.activeTranscript) {
+            evaluateAnswer(state.activeTranscript, true);
+        }
+    }, 1000);
+  };
+  
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') { setMicText('Mic active. Speak loudly...'); return; }
+    console.error('Voice error:', e.error);
+    setMicText(`Mic Error (${e.error}) - Restarting...`);
+    
+    setTimeout(() => {
+        if (state.isListening) { try { state.recognition.stop(); } catch(err){} }
+    }, 1000);
+  };
+  
+  recognition.onend = () => { 
+    if (state.isListening) { 
+      setTimeout(() => {
+        try { state.recognition.start(); } catch(e) {} 
+      }, 50); 
+    } else { 
+      setMicText('Not listening'); 
+    }
+  };
+  
+  return recognition;
+}
+
+function startListening() {
+  if (!state.recognition) state.recognition = initVoiceRecognition();
+  if (!state.recognition) { setMicText('Voice recognition not supported'); return; }
+  
+  startAudioVisualizer();
+
+  try {
+    state.isListening = true;
+    state.fullTranscript = ''; 
+    state.activeTranscript = '';
+    state.recognition.start();
+  } catch (error) { }
+}
+
+function stopListening() {
+  if (state.recognition && state.isListening) {
+    state.isListening = false;
+    clearTimeout(state.speechIdleTimer);
+    state.recognition.stop();
+    stopAudioVisualizer();
+  }
+}
+
+function voicePanelHTML(placeholder = 'Listening automatically...') {
+  return `
+    <div class="voice-panel">
+      <div class="voice-status">
+        <div class="mic-visualizer">
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+          <div class="bar"></div>
+        </div>
+        <span class="voice-status-text" id="mic-status-text">Starting mic...</span>
+      </div>
+      <div class="voice-transcript" id="voice-transcript">${placeholder}</div>
+      <div style="margin-top:16px; display:flex; gap: 10px;">
+        <input type="text" id="manual-answer" class="form-input" placeholder="Or type answer..." style="flex:1" autocomplete="off" />
+        <button class="btn btn-primary" id="manual-submit-btn">Submit</button>
+      </div>
+    </div>`;
+}
+
+// ── TIMER ────────────────────────────────────────────────────────────────
+let timerInterval;
+function startTimer() {
+  state.startTime = Date.now();
+  timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - state.startTime) / 1000);
+    const mins = Math.floor(elapsed / 60);
+    const secs = elapsed % 60;
+    document.getElementById('main-timer').textContent = `⏱ ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  }, 1000);
+}
+
+// ── SIDEBAR ──────────────────────────────────────────────────────────────
+function renderSidebar() {
+  const pct = Math.round((state.step / (STEPS.length - 1)) * 100);
+  document.getElementById('progress-pct').textContent = pct + '%';
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  const steps = STEPS.map((s, i) => {
+    let cls = 'step-nav-item';
+    let dotContent = i + 1;
+    if (i < state.step) { cls += ' done'; dotContent = '✓'; }
+    else if (i === state.step) cls += ' active';
+    else cls += ' upcoming';
+    return `
+      <div class="${cls}">
+        <div class="step-dot">${dotContent}</div>
+        <div>
+          <div class="step-nav-label">${s.icon} ${s.name}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('sidebar-steps').innerHTML = steps;
+}
+
+// ── TEST SCREENS ───────────────────────────────────────────────────────
+
+function renderIntro() {
+  updateLiveScores(); 
+  document.getElementById('test-main').innerHTML = `
+    <div class="intro-screen fade-in">
+      <div class="test-header">
+        <h2>Welcome to your Eye Health Test</h2>
+        <p>This comprehensive screening takes about 5 minutes and includes 4 clinical-grade vision tests.</p>
+      </div>
+      
+      <div class="cam-status error" id="intro-cam-status">
+        <h4>⚠️ Waiting for Camera</h4>
+        <p style="margin-top: 8px;">Please allow camera access to continue.</p>
+      </div>
+      
+      <ul class="intro-checklist">
+        <li><span class="check">✓</span> <span>Ensure good lighting in your environment</span></li>
+        <li><span class="check">✓</span> <span>Sit comfortably at 80–100 cm from the screen</span></li>
+        <li><span class="check">✓</span> <span>Find a quiet space for voice input</span></li>
+        <li><span class="check">✓</span> <span>Remove glasses if you wear them</span></li>
+        <li><span class="check">✓</span> <span>The test will take approximately 5 minutes</span></li>
+      </ul>
+      
+      <button id="start-test-btn" class="btn btn-primary btn-lg" onclick="nextStep()" disabled>
+        Waiting for Hardware...
+      </button>
+    </div>`;
+}
+
+let distCheckInterval;
+function renderDistance() {
+  document.getElementById('test-main').innerHTML = `
+    <div class="dist-check-panel fade-in">
+      <div class="test-header">
+        <div class="test-phase-label">Step 1 — Setup</div>
+        <h2>Position yourself at the correct distance</h2>
+        <p>Move back slightly. Sit 80–100 cm from your screen for accurate results.</p>
+      </div>
+      
+      <div class="dist-meter">
+        <div class="dist-value" id="dist-live">-- cm</div>
+        <p style="font-size:0.85rem;color:var(--text2);margin-bottom:4px">Current Distance</p>
+        <div class="dist-bar-wrap">
+          <div class="dist-bar-ideal"></div>
+          <div class="dist-bar-cursor" id="dist-cursor"></div>
+        </div>
+        <p style="font-size:0.82rem;color:var(--text3)">Target: <span style="color:var(--teal)">80–100 cm</span></p>
+      </div>
+      
+      <div id="dist-feedback" class="alert alert-info">
+        Position yourself so your face is clearly visible in the camera.
+      </div>
+      
+      <button class="btn btn-primary btn-full btn-lg" id="dist-confirm-btn" disabled>
+        Continue when in range
+      </button>
+    </div>`;
+
+  distCheckInterval = setInterval(() => {
+    const dist = state.distance;
+    const liveEl = document.getElementById('dist-live');
+    const cursorEl = document.getElementById('dist-cursor');
+    const feedbackEl = document.getElementById('dist-feedback');
+    const btn = document.getElementById('dist-confirm-btn');
+
+    if (liveEl) liveEl.textContent = dist + ' cm';
+    if (cursorEl) cursorEl.style.left = Math.min(Math.max((dist / 150) * 100, 0), 100) + '%';
+
+    if (dist >= 75 && dist <= 105) {
+      if (feedbackEl) {
+        feedbackEl.className = 'alert alert-success';
+        feedbackEl.innerHTML = '✓ Perfect! You\'re at the ideal distance.';
+      }
+      if (btn) {
+        btn.disabled = false;
+        btn.onclick = () => {
+          const deviation = Math.abs(90 - dist);
+          state.scores.distance = Math.round(Math.max(60, 100 - deviation * 4));
+          nextStep();
+        };
+      }
+    } else if (dist < 75) {
+      if (feedbackEl) { feedbackEl.className = 'alert alert-error'; feedbackEl.innerHTML = '⚠️ Too close! Move back slightly.'; }
+      if (btn) btn.disabled = true;
+    } else {
+      if (feedbackEl) { feedbackEl.className = 'alert alert-error'; feedbackEl.innerHTML = '⚠️ Too far! Move closer to the screen.'; }
+      if (btn) btn.disabled = true;
+    }
+  }, 200);
+}
+
+// ── MIC CALIBRATION TEST ──────────────────────────────────────────
+const MIC_WORDS = ['hello', 'vision', 'clear'];
+let micWordIdx = 0;
+
+function skipMicCheck() {
+  micWordIdx = MIC_WORDS.length;
+  renderMicCheck();
+}
+
+function renderMicCheck() {
+  if (micWordIdx >= MIC_WORDS.length) {
+    toast('Microphone working perfectly!', 'success');
+    return setTimeout(nextStep, 800);
+  }
+  
+  const word = MIC_WORDS[micWordIdx];
+  document.getElementById('test-main').innerHTML = `
+    <div class="test-header">
+      <div class="test-phase-label">Step 2 — Mic Calibration</div>
+      <h2>Let's test your microphone</h2>
+      <p>Read the word below out loud to ensure the system can hear you clearly. This will also show you how the voice feedback works.</p>
+    </div>
+    <div class="test-content fade-in">
+      <div class="contrast-display" style="font-size: 3.5rem; font-weight: bold; letter-spacing: 0.1em; background: var(--bg2); border: 1px solid var(--border); color: var(--teal); padding: 40px; border-radius: var(--radius-lg); margin-bottom: 24px; text-align: center;">${word.toUpperCase()}</div>
+      ${voicePanelHTML('Say the word...')}
+      
+      <div class="test-controls">
+        <button class="btn btn-ghost btn-sm" onclick="skipMicCheck()">Skip to Test →</button>
+      </div>
+    </div>`;
+    
+  startListening();
+  
+  document.getElementById('manual-submit-btn').onclick = () => {
+    const ans = document.getElementById('manual-answer').value;
+    if (!ans) { toast('Please type the word', 'error'); return; }
+    evaluateAnswer(ans, true); 
+  };
+}
+
+
+// ── SNELLEN TEST ────────────────────────────────────────────────────────
+const SNELLEN_ROWS = [
+  { size: '4rem', letters: 'U', score: 100 }, 
+  { size: '3rem', letters: 'FP', score: 95 },
+  { size: '2.2rem', letters: 'TOZ', score: 85 },
+  { size: '1.6rem', letters: 'LPED', score: 75 },
+  { size: '1.2rem', letters: 'PECFD', score: 65 },
+  { size: '0.95rem', letters: 'EDFCZP', score: 55 },
+  { size: '0.75rem', letters: 'FELOPZD', score: 45 }, 
+  { size: '0.6rem', letters: 'DEFPOTEC', score: 35 }, 
+];
+let snellenIdx = 0;
+let snellenAnswers = new Array(SNELLEN_ROWS.length).fill(false); 
+
+function prevSnellen() {
+  if (snellenIdx > 0) {
+    state.fullTranscript = ''; 
+    state.activeTranscript = '';
+    state.attempts = 0;
+    forceMicRestart(); 
+    snellenIdx--;
+    renderSnellen();
+  }
+}
+
+function skipSnellen() {
+  state.fullTranscript = '';
+  state.activeTranscript = '';
+  state.attempts = 0;
+  forceMicRestart(); 
+  state.details.snellen.wrong++; 
+  updateLiveScores();
+  snellenAnswers[snellenIdx] = false; 
+  snellenIdx++;
+  renderSnellen();
+}
+
+function renderSnellen() {
+  if (snellenIdx >= SNELLEN_ROWS.length) {
+    const correctCount = snellenAnswers.filter(Boolean).length;
+    state.scores.snellen = Math.round((correctCount / SNELLEN_ROWS.length) * 100);
+    toast('Snellen complete!', 'success');
+    return setTimeout(nextStep, 800);
+  }
+
+  const row = SNELLEN_ROWS[snellenIdx];
+  document.getElementById('test-main').innerHTML = `
+    <div class="test-header">
+      <div class="test-phase-label">Test 3 — Visual Acuity</div>
+      <h2>Read the letters on the chart</h2>
+    </div>
+    <div class="test-content fade-in">
+      <div class="snellen-chart"><div class="snellen-row" style="font-size:${row.size}">${row.letters}</div></div>
+      ${voicePanelHTML(`Say the letters shown`)}
+      
+      <div class="test-controls">
+        <button class="btn btn-ghost btn-sm" onclick="prevSnellen()" ${snellenIdx === 0 ? 'disabled' : ''}>← Previous Plate</button>
+        <button class="btn btn-ghost btn-sm" onclick="skipSnellen()">Skip Plate →</button>
+      </div>
+    </div>`;
+    
+  startListening();
+  
+  document.getElementById('manual-submit-btn').onclick = () => {
+    const ans = document.getElementById('manual-answer').value;
+    if (!ans) { toast('Please type the letters', 'error'); return; }
+    evaluateAnswer(ans, true); 
+  };
+}
+
+// ── ISHIHARA TEST ────────────────────────────────────────────────────────
+const ISHIHARA_PLATES = [
+  { answer: '12' }, { answer: '8' },
+  { answer: '6' }, { answer: '29' },
+  { answer: '74' }, { answer: '5' },
+  { answer: '15' }
+];
+let ishiharaIdx = 0, ishiharaAnswers = new Array(ISHIHARA_PLATES.length).fill(false); 
+
+function prevIshihara() {
+  if (ishiharaIdx > 0) {
+    state.fullTranscript = '';
+    state.activeTranscript = '';
+    state.attempts = 0;
+    forceMicRestart();
+    ishiharaIdx--;
+    renderIshihara();
+  }
+}
+
+function skipIshihara() {
+  state.fullTranscript = '';
+  state.activeTranscript = '';
+  state.attempts = 0;
+  forceMicRestart();
+  state.details.ishihara.wrong++; 
+  updateLiveScores();
+  ishiharaAnswers[ishiharaIdx] = false; 
+  ishiharaIdx++;
+  renderIshihara();
+}
+
+function renderIshihara() {
+  if (ishiharaIdx >= ISHIHARA_PLATES.length) {
+    const correctCount = ishiharaAnswers.filter(Boolean).length;
+    state.scores.ishihara = Math.round((correctCount / ISHIHARA_PLATES.length) * 100);
+    toast('Color Vision complete!', 'success');
+    return setTimeout(nextStep, 800);
+  }
+
+  const plate = ISHIHARA_PLATES[ishiharaIdx];
+  document.getElementById('test-main').innerHTML = `
+    <div class="test-header">
+      <div class="test-phase-label">Test 4 — Color Vision</div>
+      <h2>What number do you see?</h2>
+    </div>
+    <div class="test-content fade-in">
+      <div class="ishihara-plate"><canvas id="ishihara-canvas" width="300" height="300"></canvas></div>
+      ${voicePanelHTML('Say the number...')}
+      
+      <div class="test-controls">
+        <button class="btn btn-ghost btn-sm" onclick="prevIshihara()" ${ishiharaIdx === 0 ? 'disabled' : ''}>← Previous Plate</button>
+        <button class="btn btn-ghost btn-sm" onclick="skipIshihara()">Skip Plate →</button>
+      </div>
+    </div>`;
+
+  setTimeout(() => drawIshihara(document.getElementById('ishihara-canvas'), plate.answer, ishiharaIdx), 50);
+  startListening();
+  
+  document.getElementById('manual-submit-btn').onclick = () => {
+    const ans = document.getElementById('manual-answer').value;
+    if (!ans) { toast('Please type the number', 'error'); return; }
+    evaluateAnswer(ans, true);
+  };
+}
+
+function drawIshihara(canvas, answer, diffIndex) {
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  const mask = document.createElement('canvas');
+  mask.width = W; mask.height = H;
+  const mCtx = mask.getContext('2d');
+  mCtx.fillStyle = '#000'; mCtx.fillRect(0,0,W,H);
+  mCtx.font = 'bold 140px Arial';
+  mCtx.textAlign = 'center'; mCtx.textBaseline = 'middle';
+  mCtx.fillStyle = '#fff';
+  mCtx.fillText(answer, W/2, H/2);
+
+  const imgData = mCtx.getImageData(0,0,W,H).data;
+  const diffMultiplier = diffIndex / (ISHIHARA_PLATES.length - 1);
+
+  for (let i = 0; i < 2200; i++) {
+    const x = Math.random() * W;
+    const y = Math.random() * H;
+    const r = 2 + Math.random() * 4.5;
+    const px = (Math.floor(y) * W + Math.floor(x)) * 4;
+    const isText = imgData[px] > 128; 
+
+    let h, s, l;
+    if (isText) {
+      h = 15 + (80 * diffMultiplier) + Math.random() * 10;
+      s = 80 - (15 * diffMultiplier) + Math.random() * 10;
+      l = 50 - (5 * diffMultiplier) + Math.random() * 10;
+    } else {
+      h = 130 + Math.random() * 20;
+      s = 60 + Math.random() * 20;
+      l = 40 + Math.random() * 20;
+    }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = `hsl(${h},${s}%,${l}%)`; ctx.fill();
+  }
+}
+
+// ── CONTRAST TEST ─────────────────────────────────────────────────────────
+const CONTRAST_LEVELS = [
+  { opacity: 1.0 }, { opacity: 0.75 },
+  { opacity: 0.55 }, { opacity: 0.38 },
+  { opacity: 0.20 }, { opacity: 0.10 },
+  { opacity: 0.05 }, { opacity: 0.02 } 
+];
+const CONTRAST_LETTERS = ['R','K','H','S','N','C','V','Z','B','M'];
+let contrastIdx = 0, contrastAnswers = new Array(CONTRAST_LEVELS.length).fill(false); 
+
+function prevContrast() {
+  if (contrastIdx > 0) {
+    state.fullTranscript = '';
+    state.activeTranscript = '';
+    state.attempts = 0;
+    forceMicRestart();
+    contrastIdx--;
+    renderContrast();
+  }
+}
+
+function skipContrast() {
+  state.fullTranscript = '';
+  state.activeTranscript = '';
+  state.attempts = 0;
+  forceMicRestart();
+  state.details.contrast.wrong++;
+  updateLiveScores();
+  contrastAnswers[contrastIdx] = false; 
+  contrastIdx++;
+  renderContrast();
+}
+
+function renderContrast() {
+  if (contrastIdx >= CONTRAST_LEVELS.length) {
+    const correctCount = contrastAnswers.filter(Boolean).length;
+    state.scores.contrast = Math.round((correctCount / CONTRAST_LEVELS.length) * 100);
+    toast('Contrast complete!', 'success');
+    return setTimeout(nextStep, 800);
+  }
+  
+  const level = CONTRAST_LEVELS[contrastIdx];
+  const letters = Array.from({length: 3}, () => CONTRAST_LETTERS[Math.floor(Math.random() * CONTRAST_LETTERS.length)]).join(' ');
+  state.currentContrastTarget = letters.replace(/\s/g, '').toLowerCase();
+
+  document.getElementById('test-main').innerHTML = `
+    <div class="test-header">
+      <div class="test-phase-label">Test 5 — Contrast</div>
+      <h2>Read the letters</h2>
+    </div>
+    <div class="test-content fade-in">
+      <div class="contrast-display" style="color:rgba(0,0,0,${level.opacity}); background:#fff;">${letters}</div>
+      ${voicePanelHTML('Say the letters shown')}
+      
+      <div class="test-controls">
+        <button class="btn btn-ghost btn-sm" onclick="prevContrast()" ${contrastIdx === 0 ? 'disabled' : ''}>← Previous Plate</button>
+        <button class="btn btn-ghost btn-sm" onclick="skipContrast()">Can't read it →</button>
+      </div>
+    </div>`;
+
+  startListening();
+  
+  document.getElementById('manual-submit-btn').onclick = () => {
+    const ans = document.getElementById('manual-answer').value;
+    if (!ans) { toast('Please type the letters', 'error'); return; }
+    evaluateAnswer(ans, true);
+  };
+}
+
+// ASTIGMATISM TEST
+function renderAstig() {
+  document.getElementById('test-main').innerHTML = `
+    <div class="test-header">
+      <div class="test-phase-label">Test 6 — Astigmatism</div>
+      <h2>Which lines look darker or blurry?</h2>
+    </div>
+    <div class="test-content fade-in">
+      <div class="astig-wrap"><canvas id="astig-canvas" width="280" height="280"></canvas></div>
+      <div style="text-align:center; margin-bottom:16px; color:var(--text2);">
+        Say <strong>"Same"</strong> if all lines are equally sharp, or <br/> <strong>"Different"</strong> if some lines are blurry/darker.
+      </div>
+      ${voicePanelHTML('Listening...')}
+    </div>`;
+
+  setTimeout(() => drawAstig(document.getElementById('astig-canvas')), 50);
+  startListening();
+  
+  document.getElementById('manual-submit-btn').onclick = () => {
+    const ans = document.getElementById('manual-answer').value;
+    if (!ans) { toast('Please type "same" or "different"', 'error'); return; }
+    evaluateAnswer(ans, true);
+  };
+}
+
+function drawAstig(canvas) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height, cx = W/2, cy = H/2, R = W/2 - 10;
+  ctx.clearRect(0, 0, W, H);
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI*2);
+  ctx.fillStyle = '#fff'; ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.1)'; ctx.lineWidth = 1; ctx.stroke();
+  const lines = 24;
+  for (let i = 0; i < lines; i++) {
+    const angle = (i / lines) * Math.PI;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle)*(R*0.15), cy + Math.sin(angle)*(R*0.15));
+    ctx.lineTo(cx + Math.cos(angle)*(R*0.92), cy + Math.sin(angle)*(R*0.92));
+    ctx.moveTo(cx - Math.cos(angle)*(R*0.15), cy - Math.sin(angle)*(R*0.15));
+    ctx.lineTo(cx - Math.cos(angle)*(R*0.92), cy - Math.sin(angle)*(R*0.92));
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 1.5; ctx.stroke();
+  }
+}
+
+function astigSubmit(hasAstig) {
+  state.details.astigmatism = hasAstig ? 'Detected' : 'Normal';
+  toast(hasAstig ? 'Noted — possible astigmatism detected.' : 'Great — no astigmatism signs.', hasAstig ? 'error' : 'success');
+  setTimeout(nextStep, 800);
+}
+
+// ── STEP CONTROLLER ────────────────────────────────────────────────
+async function nextStep() {
+  clearInterval(distCheckInterval);
+  stopListening();
+  state.step++;
+  renderSidebar();
+
+  switch (state.step) {
+    case 1: renderDistance(); break;
+    case 2: renderMicCheck(); break;
+    case 3: renderSnellen(); break;
+    case 4: ishiharaIdx = 0; ishiharaAnswers.fill(false); renderIshihara(); break;
+    case 5: contrastIdx = 0; contrastAnswers.fill(false); renderContrast(); break;
+    case 6: renderAstig(); break;
+    case 7: await submitResults(); break;
+  }
+}
+
+// ── SUBMIT RESULTS ─────────────────────────────────
+async function submitResults() {
+  document.getElementById('test-main').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:20px;text-align:center;padding:60px 32px">
+      <div class="spinner" style="width:40px;height:40px;border-width:3px"></div>
+      <h2>Calculating your results...</h2>
+      <p class="text-muted">Saving your eye health report</p>
+    </div>`;
+
+  clearInterval(timerInterval);
+  const duration = state.startTime ? Math.round((Date.now() - state.startTime) / 1000) : 0;
+
+  const localAnalytics = {
+      details: state.details,
+      averageDistance: state.distanceCount > 0 ? Math.round(state.distanceSum / state.distanceCount) : state.distance
+  };
+  sessionStorage.setItem('ec_local_analytics', JSON.stringify(localAnalytics));
+
+  const finalScore = Math.round(
+      (state.scores.snellen * 0.40) +
+      (state.scores.contrast * 0.25) +
+      (state.scores.ishihara * 0.20) +
+      (state.scores.distance * 0.15)
+  );
+
+  let finalGrade = "Critical";
+  let rec = "Immediate consultation with an ophthalmologist is strongly advised.";
+  if (finalScore >= 90) { finalGrade = "Excellent"; rec = "Your vision is in top condition."; }
+  else if (finalScore >= 80) { finalGrade = "Good"; rec = "Your vision is healthy, but keep monitoring for subtle changes."; }
+  else if (finalScore >= 60) { finalGrade = "Fair"; rec = "You have slight vision discrepancies. Consider an annual checkup."; }
+  else if (finalScore >= 40) { finalGrade = "Poor"; rec = "Your vision is below average. You likely need corrective lenses."; }
+
+  const failSafeResult = {
+      scores: state.scores,
+      testDuration: duration,
+      grade: finalGrade,
+      finalScore: finalScore,
+      needsGlasses: state.scores.snellen < 80 || state.scores.distance < 60,
+      recommendation: rec,
+      createdAt: new Date().toISOString()
+  };
+  sessionStorage.setItem('ec_last_result', JSON.stringify(failSafeResult));
+
+  try {
+    const data = await apiFetch('/results/save', {
+      method: 'POST',
+      body: JSON.stringify({ scores: state.scores, testDuration: duration }),
+    });
+    if (data && data.result) {
+        sessionStorage.setItem('ec_last_result', JSON.stringify(data.result));
+    }
+  } catch (err) {
+    console.warn("Backend save failed, redirecting to results safely.", err);
+  }
+  
+  window.location.href = 'result.html';
+}
+
+// ── CLEANUP ────────────────────────────────────────────────────────
+window.addEventListener('beforeunload', () => {
+  stopCamera();
+  stopListening();
+  clearInterval(timerInterval);
+});
+
+// ── Init ───────────────────────────────────────────────────────────
+state.step = 0;
+renderSidebar();
+renderIntro();
+startCamera();
+startTimer();
+</script>
+</body>
+</html>

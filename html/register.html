@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Register — EyeCheck</title>
+  <link rel="stylesheet" href="../css/style.css" />
+  <style>
+    .auth-wrap { display: grid; grid-template-columns: 1fr 1fr; min-height: 100vh; }
+    .auth-side {
+      background: var(--bg2); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 40px; position: relative; overflow: hidden;
+    }
+    .auth-side::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(77,159,255,0.07), transparent);
+    }
+    .auth-side-brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 1.1rem; position: relative; z-index: 1; }
+    .auth-visual { flex: 1; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+    .auth-benefits { position: relative; z-index: 1; }
+    .benefit-item { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .benefit-check { width: 24px; height: 24px; border-radius: 50%; background: var(--teal-dim); border: 1px solid rgba(0,212,170,0.3); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; color: var(--teal); flex-shrink: 0; }
+    .benefit-item span { font-size: 0.9rem; color: var(--text2); }
+    .auth-form-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+    .auth-form-wrap { width: 100%; max-width: 420px; }
+    .auth-form-wrap h2 { margin-bottom: 6px; }
+    .auth-form-wrap > p { margin-bottom: 28px; font-size: 0.95rem; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 768px) {
+      .auth-wrap { grid-template-columns: 1fr; }
+      .auth-side { display: none; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="auth-wrap">
+  <!-- Left side -->
+  <div class="auth-side">
+    <div class="auth-side-brand"><span class="dot pulse"></span> EyeCheck</div>
+    <div class="auth-visual">
+      <svg viewBox="0 0 280 280" width="260" height="260" xmlns="http://www.w3.org/2000/svg">
+        <!-- Snellen-like chart visual -->
+        <rect x="80" y="40" width="120" height="200" rx="4" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+        <text x="140" y="82" text-anchor="middle" fill="rgba(255,255,255,0.8)" font-size="32" font-family="Space Mono" font-weight="700">E</text>
+        <text x="124" y="114" text-anchor="middle" fill="rgba(255,255,255,0.6)" font-size="22" font-family="Space Mono">FP</text>
+        <text x="140" y="139" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="16" font-family="Space Mono">TOZ</text>
+        <text x="140" y="159" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-size="12" font-family="Space Mono">LPED</text>
+        <text x="140" y="176" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="10" font-family="Space Mono">PECFD</text>
+        <text x="140" y="191" text-anchor="middle" fill="rgba(255,255,255,0.2)" font-size="8" font-family="Space Mono">EDFCZP</text>
+        <!-- Line marker -->
+        <line x1="72" y1="139" x2="80" y2="139" stroke="rgba(0,212,170,0.6)" stroke-width="1.5"/>
+        <line x1="200" y1="139" x2="208" y2="139" stroke="rgba(0,212,170,0.6)" stroke-width="1.5"/>
+        <text x="60" y="143" text-anchor="end" fill="rgba(0,212,170,0.6)" font-size="7" font-family="Space Mono">20/40</text>
+      </svg>
+    </div>
+    <div class="auth-benefits">
+      <div class="benefit-item"><div class="benefit-check">✓</div><span>4 clinical-grade vision tests</span></div>
+      <div class="benefit-item"><div class="benefit-check">✓</div><span>Voice-enabled — no typing needed</span></div>
+      <div class="benefit-item"><div class="benefit-check">✓</div><span>Track your eye health over time</span></div>
+      <div class="benefit-item"><div class="benefit-check">✓</div><span>Instant grade + recommendations</span></div>
+    </div>
+  </div>
+
+  <!-- Right form side -->
+  <div class="auth-form-side">
+    <div class="auth-form-wrap">
+      <h2 class="fade-in">Create your account</h2>
+      <p class="text-muted fade-in-delay-1">Free forever. Start your first test in minutes.</p>
+
+      <div id="error-box"></div>
+
+      <form id="register-form" class="fade-in-delay-2">
+        <div class="form-group">
+          <label class="form-label">Full name</label>
+          <input type="text" id="name" class="form-input" placeholder="Your full name" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email address</label>
+          <input type="email" id="email" class="form-input" placeholder="you@example.com" required />
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input type="number" id="age" class="form-input" placeholder="e.g. 22" min="5" max="100" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Gender</label>
+            <select id="gender" class="form-input">
+              <option value="">Select</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="password" class="form-input" placeholder="Min 6 characters" required />
+          <span class="form-hint">At least 6 characters</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm password</label>
+          <input type="password" id="confirm-password" class="form-input" placeholder="Repeat password" required />
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:8px">
+          Create Account
+        </button>
+
+        <div class="divider"><span>already have an account?</span></div>
+        <a href="login.html" class="btn btn-outline btn-full">Sign in instead</a>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container"></div>
+<script src="../js/utils.js"></script>
+<script>
+  Auth.redirectIfLoggedIn();
+
+  document.getElementById('register-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearError('#error-box');
+
+    const password = document.getElementById('password').value;
+    const confirm = document.getElementById('confirm-password').value;
+    if (password !== confirm) {
+      showError('#error-box', 'Passwords do not match.');
+      return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    setLoading(btn, true);
+
+    try {
+      const body = {
+        name: document.getElementById('name').value.trim(),
+        email: document.getElementById('email').value.trim(),
+        password,
+      };
+      const age = document.getElementById('age').value;
+      const gender = document.getElementById('gender').value;
+      if (age) body.age = Number(age);
+      if (gender) body.gender = gender;
+
+      const data = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
+
+      Auth.set(data.token, data.user);
+      toast('Account created! Welcome to EyeCheck 🎉', 'success');
+      setTimeout(() => window.location.href = 'dashboard.html', 1200);
+    } catch (err) {
+      showError('#error-box', err.message);
+      setLoading(btn, false);
+    }
+  });
+</script>
+</body>
+</html>
