@@ -399,7 +399,7 @@ function startFaceDetection() {
       distReadout.style.color = 'var(--text3)';
     } else {
       const face = event.data[0];
-      const calculatedDistance = Math.round(4800 / face.width);
+      const calculatedDistance = Math.round(3500 / face.width);
       state.distance = Math.round((state.distance * 0.7) + (calculatedDistance * 0.3)) || calculatedDistance;
       distReadout.textContent = `${state.distance} cm`;
       
@@ -935,7 +935,7 @@ function renderDistance() {
     if (liveEl) liveEl.textContent = dist + ' cm';
     if (cursorEl) cursorEl.style.left = Math.min(Math.max((dist / 150) * 100, 0), 100) + '%';
 
-    if (dist >= 75 && dist <= 105) {
+    if (dist >= 60 && dist <= 115) {
       if (feedbackEl) {
         feedbackEl.className = 'alert alert-success';
         feedbackEl.innerHTML = '✓ Perfect! You\'re at the ideal distance.';
@@ -948,7 +948,7 @@ function renderDistance() {
           nextStep();
         };
       }
-    } else if (dist < 75) {
+    } else if (dist < 60) {
       if (feedbackEl) { feedbackEl.className = 'alert alert-error'; feedbackEl.innerHTML = '⚠️ Too close! Move back slightly.'; }
       if (btn) btn.disabled = true;
     } else {
