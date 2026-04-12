@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>EyeCheck — AI Eye Health Screening</title>
-  <link rel="stylesheet" href="../css/style.css" />
+  <link rel="stylesheet" href="/css/style.css" />
   <style>
     /* Hero */
     .hero {
@@ -145,9 +145,9 @@
   <div class="nav-links" id="nav-links">
     <a href="#how-it-works">How it works</a>
     <a href="#tests">Tests</a>
-    <a href="login.html" id="nav-login">Login</a>
-    <a href="register.html" id="nav-register" class="btn btn-primary btn-sm">Get Started</a>
-    <a href="dashboard.html" id="nav-dashboard" class="hidden">Dashboard</a>
+    <a href="/html/login.html" id="nav-login">Login</a>
+    <a href="/html/register.html" id="nav-register" class="btn btn-primary btn-sm">Get Started</a>
+    <a href="/html/dashboard.html" id="nav-dashboard" class="hidden">Dashboard</a>
     <button onclick="logout()" id="nav-logout" class="btn btn-ghost btn-sm hidden">Logout</button>
   </div>
 </nav>
@@ -168,7 +168,7 @@
         4 vision tests with real-time distance monitoring and voice input. Get a detailed health report and personalized recommendations.
       </p>
       <div class="hero-cta">
-        <a href="register.html" class="btn btn-primary btn-lg" id="cta-start">Start Free Test</a>
+        <a href="/html/register.html" class="btn btn-primary btn-lg" id="cta-start">Start Free Test</a>
         <a href="#how-it-works" class="btn btn-outline btn-lg">See How It Works</a>
       </div>
     </div>
@@ -284,13 +284,13 @@
     <div class="cta-banner">
       <h2>Ready to check your vision?</h2>
       <p>Free, private, and takes less than 5 minutes. No equipment needed.</p>
-      <a href="register.html" class="btn btn-primary btn-lg" id="cta-bottom">Start Your Eye Test</a>
+      <a href="/html/register.html" class="btn btn-primary btn-lg" id="cta-bottom">Start Your Eye Test</a>
     </div>
   </div>
 </section>
 
 <div id="toast-container"></div>
-<script src="../js/utils.js"></script>
+<script src="`/js/utils.js"></script>
 <script>
   // Update nav based on auth state
   if (Auth.isLoggedIn()) {
