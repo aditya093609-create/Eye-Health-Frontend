@@ -149,7 +149,7 @@
 
       Auth.set(data.token, data.user);
       toast('Login successful! Redirecting...', 'success');
-      setTimeout(() => window.location.href = './index.html', 1000);
+      setTimeout(() => window.location.href = '../index.html', 1000);
     } catch (err) {
       showError('#error-box', err.message);
       setLoading(btn, false);
