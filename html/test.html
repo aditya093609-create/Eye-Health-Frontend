@@ -477,9 +477,10 @@ function stopAudioVisualizer() {
 
 function sanitizeSnellen(text) {
   let t = text.toLowerCase();
-  t = t.replace(/\b(i|see|the|letter|letters|is|are|it|its|it's|read|can|and|mean|meant|like|looks)\b/g, '');
+  t = t.replace(/\b(i|see|the|letter|letters|is|it|its|it's|read|can|and|mean|meant|like|looks)\b/g, '');
   const map = {
     'u': ['you'],
+    'r': ['are', 'our', 'hour'],
     'e': ['ee', 'he', 'hey', 'a', 'i'], 
     'f': ['ef', 'eff', 'if', 'of', 'half', 'wife', 's', 'x'],
     'p': ['pee', 'pea', 'be', 'fee', 'b', 'v'], 
@@ -500,7 +501,7 @@ function sanitizeSnellen(text) {
     .replace(/g/g, 't').replace(/j/g, 'z')
     .replace(/a/g, 'e').replace(/i/g, 'e')
     .replace(/y/g, 'e').replace(/m/g, 'n')
-    .replace(/w/g, 'v').replace(/r/g, 'l');
+    .replace(/w/g, 'v');
   return cleaned;
 }
 
